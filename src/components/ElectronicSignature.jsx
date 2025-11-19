@@ -3,20 +3,13 @@ import { PenTool, Eraser, CheckCircle, AlertCircle, FileText } from 'lucide-reac
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import type { CustomerData } from '../App';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
-interface ElectronicSignatureProps {
-  customerData: CustomerData;
-  onNext: (data: Partial<CustomerData>) => void;
-  onBack: () => void;
-}
-
-export function ElectronicSignature({ customerData, onNext, onBack }: ElectronicSignatureProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export function ElectronicSignature({ customerData, onNext, onBack }) {
+  const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
-  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [signatureData, setSignatureData] = useState(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
@@ -37,7 +30,7 @@ export function ElectronicSignature({ customerData, onNext, onBack }: Electronic
     ctx.lineJoin = 'round';
   }, []);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -48,7 +41,7 @@ export function ElectronicSignature({ customerData, onNext, onBack }: Electronic
     const rect = canvas.getBoundingClientRect();
     
     let x, y;
-    if ('touches' in e) {
+    if (e.touches) {
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
     } else {
@@ -60,7 +53,7 @@ export function ElectronicSignature({ customerData, onNext, onBack }: Electronic
     ctx.moveTo(x, y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (e) => {
     if (!isDrawing) return;
 
     const canvas = canvasRef.current;
@@ -72,7 +65,7 @@ export function ElectronicSignature({ customerData, onNext, onBack }: Electronic
     const rect = canvas.getBoundingClientRect();
     
     let x, y;
-    if ('touches' in e) {
+    if (e.touches) {
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
     } else {

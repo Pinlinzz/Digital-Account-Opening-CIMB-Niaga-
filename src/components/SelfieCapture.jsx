@@ -1,24 +1,11 @@
-import { useState, useRef } from 'react';
-import { AlertCircle, CheckCircle, Loader2, X, UserCheck } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Camera, AlertCircle, CheckCircle, Loader2, X, UserCheck, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import type { CustomerData } from '../App';
-
-interface SelfieCaptureProps {
-  onNext: (data: Partial<CustomerData>) => void;
-  onBack: () => void;
-  ktpImage?: string;
-}
 
 // Mock Liveness Detection & Face Matching
-const mockLivenessCheck = async (selfieData: string, ktpData?: string): Promise<{
-  success: boolean;
-  livenessScore: number;
-  faceMatchScore?: number;
-  spoofingDetected: boolean;
-  error?: string;
-}> => {
+const mockLivenessCheck = async (selfieData, ktpData) => {
   // Simulate processing time
   await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -43,62 +30,103 @@ const mockLivenessCheck = async (selfieData: string, ktpData?: string): Promise<
   };
 };
 
-export function SelfieCapture({ onNext, onBack, ktpImage }: SelfieCaptureProps) {
-  const [image, setImage] = useState<string | null>(null);
+export function SelfieCapture({ onNext, onBack, ktpImage }) {
+  const [stream, setStream] = useState(null);
+  const [capturedImage, setCapturedImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError('File harus berupa gambar');
-      return;
+  useEffect(() => {
+    if (!capturedImage) {
+      startCamera();
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Ukuran file maksimal 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const imageData = e.target?.result as string;
-      setImage(imageData);
-      setError(null);
-      setVerificationResult(null);
-
-      // Process liveness detection and face matching
-      setIsProcessing(true);
-      const result = await mockLivenessCheck(imageData, ktpImage);
-      setIsProcessing(false);
-
-      if (result.success) {
-        setVerificationResult(result);
-      } else {
-        setError(result.error || 'Gagal memverifikasi wajah');
-        setImage(null);
-      }
+    return () => {
+      stopCamera();
     };
-    reader.readAsDataURL(file);
+  }, [capturedImage]);
+
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      setCameraError('Tidak dapat mengakses kamera. Pastikan Anda telah memberikan izin akses kamera.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw the current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to image data
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    setCapturedImage(imageData);
+    stopCamera();
+
+    // Process liveness detection
+    processLiveness(imageData);
+  };
+
+  const processLiveness = async (imageData) => {
+    setIsProcessing(true);
+    setError(null);
+
+    const result = await mockLivenessCheck(imageData, ktpImage);
+    setIsProcessing(false);
+
+    if (result.success) {
+      setVerificationResult(result);
+    } else {
+      setError(result.error || 'Gagal memverifikasi wajah');
+    }
   };
 
   const handleRetake = () => {
-    setImage(null);
+    setCapturedImage(null);
     setVerificationResult(null);
     setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    startCamera();
   };
 
   const handleContinue = () => {
     if (verificationResult?.success) {
+      stopCamera();
       onNext({
-        selfieImage: image || undefined,
+        selfieImage: capturedImage || undefined,
       });
     }
   };
@@ -114,34 +142,53 @@ export function SelfieCapture({ onNext, onBack, ktpImage }: SelfieCaptureProps) 
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {!image ? (
+          {!capturedImage ? (
             <div className="space-y-4">
-              <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-500 transition-colors cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className="w-24 h-24 mx-auto mb-4 bg-blue-50 rounded-full flex items-center justify-center">
-                  <UserCheck className="w-12 h-12 text-blue-600" />
-                </div>
-                <p className="text-gray-600 mb-2">Klik untuk ambil foto selfie</p>
-                <p className="text-sm text-gray-500">Format: JPG, PNG (Max: 5MB)</p>
-              </div>
+              {cameraError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{cameraError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-auto rounded-lg mirror-video"
+                      style={{ transform: 'scaleX(-1)' }}
+                    />
+                    
+                    {/* Face guide overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-64 h-80 border-4 border-white rounded-full opacity-50"></div>
+                    </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="user"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+                    {/* Capture button overlay */}
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+                      <Button
+                        onClick={capturePhoto}
+                        size="lg"
+                        className="rounded-full w-16 h-16 p-0"
+                      >
+                        <Camera className="w-6 h-6" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <canvas ref={canvasRef} className="hidden" />
+                </>
+              )}
 
               <Alert className="bg-blue-50 border-blue-200">
                 <AlertCircle className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800">
                   <strong>Panduan Selfie:</strong>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                    <li>Pastikan wajah Anda terlihat jelas dan menghadap kamera</li>
+                    <li>Pastikan wajah Anda berada di dalam lingkaran panduan</li>
+                    <li>Pastikan wajah terlihat jelas dan menghadap kamera</li>
                     <li>Lepas kacamata, masker, atau topi</li>
                     <li>Pencahayaan cukup terang</li>
                     <li>Posisi wajah lurus, tidak miring</li>
@@ -153,9 +200,10 @@ export function SelfieCapture({ onNext, onBack, ktpImage }: SelfieCaptureProps) 
             <div className="space-y-4">
               <div className="relative">
                 <img 
-                  src={image} 
+                  src={capturedImage} 
                   alt="Selfie preview" 
                   className="w-full max-w-md mx-auto rounded-lg border-2 border-gray-200"
+                  style={{ transform: 'scaleX(-1)' }}
                 />
                 <Button
                   variant="destructive"
@@ -163,7 +211,7 @@ export function SelfieCapture({ onNext, onBack, ktpImage }: SelfieCaptureProps) 
                   className="absolute top-2 right-2"
                   onClick={handleRetake}
                 >
-                  <X className="w-4 h-4 mr-1" />
+                  <RefreshCw className="w-4 h-4 mr-1" />
                   Foto Ulang
                 </Button>
               </div>
@@ -233,14 +281,14 @@ export function SelfieCapture({ onNext, onBack, ktpImage }: SelfieCaptureProps) 
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </div>
           )}
 
           <div className="flex gap-3">

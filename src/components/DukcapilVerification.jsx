@@ -3,27 +3,9 @@ import { Shield, Loader2, CheckCircle, AlertCircle, Database } from 'lucide-reac
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import type { CustomerData } from '../App';
-
-interface DukcapilVerificationProps {
-  customerData: CustomerData;
-  onNext: () => void;
-  onBack: () => void;
-}
 
 // Mock Dukcapil API Integration
-const mockDukcapilVerification = async (nik: string): Promise<{
-  success: boolean;
-  verified: boolean;
-  data?: {
-    nik: string;
-    nama: string;
-    tanggalLahir: string;
-    statusKTP: string;
-    validUntil: string;
-  };
-  error?: string;
-}> => {
+const mockDukcapilVerification = async (nik) => {
   // Simulate API call time
   await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -51,10 +33,10 @@ const mockDukcapilVerification = async (nik: string): Promise<{
   }
 };
 
-export function DukcapilVerification({ customerData, onNext, onBack }: DukcapilVerificationProps) {
+export function DukcapilVerification({ customerData, onNext, onBack }) {
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {

@@ -1,16 +1,6 @@
 import { Check } from 'lucide-react';
 
-interface Step {
-  id: number;
-  name: string;
-}
-
-interface ProgressIndicatorProps {
-  steps: Step[];
-  currentStep: number;
-}
-
-export function ProgressIndicator({ steps, currentStep }: ProgressIndicatorProps) {
+export function ProgressIndicator({ steps, currentStep }) {
   const displaySteps = steps.slice(1, -1); // Exclude welcome and activation
 
   return (

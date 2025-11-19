@@ -2,11 +2,7 @@ import { ArrowRight, Shield, Clock, CheckCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-interface WelcomeScreenProps {
-  onNext: () => void;
-}
-
-export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
+export function WelcomeScreen({ onNext }) {
   const features = [
     {
       icon: Clock,

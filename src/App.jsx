@@ -7,20 +7,9 @@ import { ElectronicSignature } from './components/ElectronicSignature';
 import { AccountActivation } from './components/AccountActivation';
 import { ProgressIndicator } from './components/ProgressIndicator';
 
-export interface CustomerData {
-  nik?: string;
-  nama?: string;
-  tanggalLahir?: string;
-  alamat?: string;
-  ktpImage?: string;
-  selfieImage?: string;
-  signature?: string;
-  accountNumber?: string;
-}
-
 export default function App() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [customerData, setCustomerData] = useState<CustomerData>({});
+  const [customerData, setCustomerData] = useState({});
 
   const steps = [
     { id: 0, name: 'Selamat Datang', component: 'welcome' },
@@ -31,7 +20,7 @@ export default function App() {
     { id: 5, name: 'Aktivasi Rekening', component: 'activation' },
   ];
 
-  const handleNext = (data?: Partial<CustomerData>) => {
+  const handleNext = (data) => {
     if (data) {
       setCustomerData({ ...customerData, ...data });
     }

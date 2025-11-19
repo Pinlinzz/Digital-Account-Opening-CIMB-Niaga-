@@ -3,20 +3,9 @@ import { CheckCircle, Loader2, CreditCard, Download, Share2, Sparkles } from 'lu
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import type { CustomerData } from '../App';
-
-interface AccountActivationProps {
-  customerData: CustomerData;
-}
 
 // Mock Core Banking Integration
-const mockAccountActivation = async (customerData: CustomerData): Promise<{
-  success: boolean;
-  accountNumber: string;
-  accountType: string;
-  status: string;
-  openingDate: string;
-}> => {
+const mockAccountActivation = async (customerData) => {
   // Simulate core banking processing
   await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -32,9 +21,9 @@ const mockAccountActivation = async (customerData: CustomerData): Promise<{
   };
 };
 
-export function AccountActivation({ customerData }: AccountActivationProps) {
+export function AccountActivation({ customerData }) {
   const [isActivating, setIsActivating] = useState(true);
-  const [accountInfo, setAccountInfo] = useState<any>(null);
+  const [accountInfo, setAccountInfo] = useState(null);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
