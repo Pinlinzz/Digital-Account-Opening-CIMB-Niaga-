@@ -1,32 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, AlertCircle, CheckCircle, Loader2, X, UserCheck, RefreshCw } from 'lucide-react';
+import { Camera, Loader2, AlertCircle, CheckCircle2, RefreshCw, ArrowRight, ArrowLeft, Info } from 'lucide-react';
 import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 
-// Mock Liveness Detection & Face Matching
 const mockLivenessCheck = async (selfieData, ktpData) => {
-  // Simulate processing time
   await new Promise(resolve => setTimeout(resolve, 3000));
-
   const random = Math.random();
   
-  // Simulate 95% success rate for liveness
   if (random < 0.05) {
     return {
       success: false,
       livenessScore: 50 + Math.random() * 30,
-      spoofingDetected: true,
-      error: 'Terdeteksi kemungkinan spoofing. Pastikan Anda menggunakan wajah asli, bukan foto atau video.',
+      error: 'Verifikasi gagal. Pastikan wajah Anda terlihat jelas dan tidak menggunakan foto/video orang lain.',
     };
   }
 
-  // Simulate high liveness and face match scores
   return {
     success: true,
     livenessScore: 96 + Math.random() * 3,
     faceMatchScore: 95 + Math.random() * 4,
-    spoofingDetected: false,
   };
 };
 
@@ -44,7 +36,6 @@ export function SelfieCapture({ onNext, onBack, ktpImage }) {
     if (!capturedImage) {
       startCamera();
     }
-
     return () => {
       stopCamera();
     };
@@ -54,20 +45,14 @@ export function SelfieCapture({ onNext, onBack, ktpImage }) {
     try {
       setCameraError(null);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { facingMode: 'user', width: 1280, height: 720 }
       });
-      
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (err) {
-      console.error('Error accessing camera:', err);
-      setCameraError('Tidak dapat mengakses kamera. Pastikan Anda telah memberikan izin akses kamera.');
+      setCameraError('Tidak dapat mengakses kamera. Pastikan Anda memberikan izin akses kamera.');
     }
   };
 
@@ -79,232 +64,215 @@ export function SelfieCapture({ onNext, onBack, ktpImage }) {
   };
 
   const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Draw the current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convert canvas to image data
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedImage(imageData);
-    stopCamera();
-
-    // Process liveness detection
-    processLiveness(imageData);
-  };
-
-  const processLiveness = async (imageData) => {
-    setIsProcessing(true);
-    setError(null);
-
-    const result = await mockLivenessCheck(imageData, ktpImage);
-    setIsProcessing(false);
-
-    if (result.success) {
-      setVerificationResult(result);
-    } else {
-      setError(result.error || 'Gagal memverifikasi wajah');
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg', 0.95);
+      setCapturedImage(imageData);
+      stopCamera();
+      verifyLiveness(imageData);
     }
   };
 
-  const handleRetake = () => {
+  const verifyLiveness = async (selfieData) => {
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      const result = await mockLivenessCheck(selfieData, ktpImage);
+      
+      if (result.success) {
+        setVerificationResult(result);
+      } else {
+        setError(result.error);
+        setVerificationResult(null);
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan saat verifikasi. Silakan coba lagi.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const retakePhoto = () => {
     setCapturedImage(null);
     setVerificationResult(null);
     setError(null);
-    startCamera();
   };
 
-  const handleContinue = () => {
-    if (verificationResult?.success) {
-      stopCamera();
-      onNext({
-        selfieImage: capturedImage || undefined,
-      });
-    }
+  const handleSubmit = () => {
+    onNext({
+      selfieImage: capturedImage,
+    });
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card className="shadow-xl border-0">
-        <CardHeader>
-          <CardTitle>Verifikasi Wajah & Liveness Check</CardTitle>
-          <CardDescription>
-            Ambil foto selfie Anda untuk verifikasi identitas dan deteksi keaslian (liveness detection)
-          </CardDescription>
-        </CardHeader>
+    <div className="section-container max-w-4xl py-8">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-10 shadow-sm">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <span className="font-medium">Langkah 2 dari 4</span>
+            <span>•</span>
+            <span>Verifikasi Wajah</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            Verifikasi Wajah Anda
+          </h2>
+          <p className="text-gray-600">
+            Ambil foto selfie untuk memastikan Anda adalah pemilik e-KTP yang sah
+          </p>
+        </div>
 
-        <CardContent className="space-y-6">
-          {!capturedImage ? (
-            <div className="space-y-4">
-              {cameraError ? (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{cameraError}</AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  <div className="relative bg-black rounded-lg overflow-hidden">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-auto rounded-lg mirror-video"
-                      style={{ transform: 'scaleX(-1)' }}
-                    />
-                    
-                    {/* Face guide overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-64 h-80 border-4 border-white rounded-full opacity-50"></div>
-                    </div>
+        {/* Camera Error */}
+        {cameraError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{cameraError}</AlertDescription>
+          </Alert>
+        )}
 
-                    {/* Capture button overlay */}
-                    <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-                      <Button
-                        onClick={capturePhoto}
-                        size="lg"
-                        className="rounded-full w-16 h-16 p-0"
-                      >
-                        <Camera className="w-6 h-6" />
-                      </Button>
-                    </div>
+        {/* Camera View */}
+        {!capturedImage && !cameraError && (
+          <div className="space-y-6">
+            <div className="relative aspect-[4/3] bg-gray-900 rounded-xl overflow-hidden border border-gray-200">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Face Oval Guide */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="relative">
+                  <div className="w-48 h-64 border-4 border-white rounded-[50%] opacity-40"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <p className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
+                      Posisikan wajah di sini
+                    </p>
                   </div>
-
-                  <canvas ref={canvasRef} className="hidden" />
-                </>
-              )}
-
-              <Alert className="bg-blue-50 border-blue-200">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                  <strong>Panduan Selfie:</strong>
-                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                    <li>Pastikan wajah Anda berada di dalam lingkaran panduan</li>
-                    <li>Pastikan wajah terlihat jelas dan menghadap kamera</li>
-                    <li>Lepas kacamata, masker, atau topi</li>
-                    <li>Pencahayaan cukup terang</li>
-                    <li>Posisi wajah lurus, tidak miring</li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="relative">
-                <img 
-                  src={capturedImage} 
-                  alt="Selfie preview" 
-                  className="w-full max-w-md mx-auto rounded-lg border-2 border-gray-200"
-                  style={{ transform: 'scaleX(-1)' }}
-                />
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={handleRetake}
-                >
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Foto Ulang
-                </Button>
+                </div>
               </div>
+            </div>
 
-              {isProcessing && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                  <AlertDescription className="text-blue-800">
-                    <div className="space-y-1">
-                      <p>Melakukan verifikasi biometrik...</p>
-                      <p className="text-sm">• Liveness detection (anti-spoofing)</p>
-                      <p className="text-sm">• Face matching dengan e-KTP</p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+            <Button
+              onClick={capturePhoto}
+              className="w-full h-12 bg-[#E0413D] hover:bg-[#C73632] text-base font-semibold"
+            >
+              <Camera className="w-5 h-5 mr-2" />
+              Ambil Foto
+            </Button>
 
-              {verificationResult && verificationResult.success && (
-                <div className="space-y-4">
-                  <Alert className="bg-green-50 border-green-200">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      Verifikasi berhasil! Identitas Anda telah terverifikasi.
-                    </AlertDescription>
-                  </Alert>
+            {/* Tips */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <p className="font-semibold text-gray-900 text-sm">Tips selfie yang baik:</p>
+                  <ul className="text-sm text-gray-600 space-y-1.5">
+                    <li>• Pastikan wajah berada di tengah oval</li>
+                    <li>• Gunakan pencahayaan yang cukup</li>
+                    <li>• Lepas kacamata, topi, atau masker</li>
+                    <li>• Pastikan ekspresi wajah natural</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <h4 className="font-semibold text-gray-900">Hasil Verifikasi:</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Liveness Score:</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-green-500 transition-all"
-                              style={{ width: `${verificationResult.livenessScore}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-semibold text-green-600">
-                            {verificationResult.livenessScore.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Face Match Score:</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-blue-500 transition-all"
-                              style={{ width: `${verificationResult.faceMatchScore}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-semibold text-blue-600">
-                            {verificationResult.faceMatchScore?.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
+        {/* Captured Image */}
+        {capturedImage && (
+          <div className="space-y-6">
+            <div className="relative rounded-xl overflow-hidden border border-gray-200">
+              <img
+                src={capturedImage}
+                alt="Selfie"
+                className="w-full h-auto"
+              />
+            </div>
 
-                      <div className="flex justify-between items-center pt-2 border-t">
-                        <span className="text-sm text-gray-600">Anti-Spoofing:</span>
-                        <span className="text-sm font-semibold text-green-600">
-                          ✓ Passed
-                        </span>
-                      </div>
+            {/* Processing */}
+            {isProcessing && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
+                <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Memverifikasi Wajah
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Melakukan deteksi keaslian dan pencocokan dengan e-KTP...
+                </p>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Success */}
+            {verificationResult && verificationResult.success && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-green-900 mb-2">
+                      Verifikasi Berhasil
+                    </p>
+                    <div className="text-sm text-green-700 space-y-1">
+                      <p>• Skor Keaslian: {verificationResult.livenessScore.toFixed(1)}%</p>
+                      <p>• Kesesuaian Wajah: {verificationResult.faceMatchScore.toFixed(1)}%</p>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={onBack} className="flex-1">
-              Kembali
-            </Button>
-            <Button
-              onClick={handleContinue}
-              disabled={!verificationResult || isProcessing}
-              className="flex-1"
-            >
-              Lanjutkan
-            </Button>
+            {!isProcessing && (
+              <Button
+                onClick={retakePhoto}
+                variant="outline"
+                className="w-full h-11"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Ambil Foto Ulang
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        {/* Navigation */}
+        <div className="flex gap-3 mt-8">
+          <Button
+            onClick={onBack}
+            variant="outline"
+            className="flex-1 h-11"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Kembali
+          </Button>
+          
+          <Button
+            onClick={handleSubmit}
+            disabled={!verificationResult || !verificationResult.success}
+            className="flex-1 h-11 bg-[#E0413D] hover:bg-[#C73632] disabled:bg-gray-300"
+          >
+            Lanjutkan
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
     </div>
   );
 }

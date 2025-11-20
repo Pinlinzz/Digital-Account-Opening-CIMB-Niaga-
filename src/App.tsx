@@ -1,27 +1,37 @@
 import { useState } from 'react';
-import { Header } from './components/Header';
+import './styles/globals.css';
+import { Navigation } from './components/Navigation';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { KTPUpload } from './components/KTPUpload';
 import { SelfieCapture } from './components/SelfieCapture';
 import { DukcapilVerification } from './components/DukcapilVerification';
 import { ElectronicSignature } from './components/ElectronicSignature';
 import { AccountActivation } from './components/AccountActivation';
-import { ProgressIndicator } from './components/ProgressIndicator';
+import { StepIndicator } from './components/StepIndicator';
+
+export interface CustomerData {
+  nik?: string;
+  nama?: string;
+  tanggalLahir?: string;
+  alamat?: string;
+  ktpImage?: string;
+  selfieImage?: string;
+  signature?: string;
+  accountNumber?: string;
+}
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [customerData, setCustomerData] = useState({});
+  const [customerData, setCustomerData] = useState<CustomerData>({});
 
   const steps = [
-    { id: 0, name: 'Selamat Datang', component: 'welcome' },
-    { id: 1, name: 'Upload e-KTP', component: 'ktp' },
-    { id: 2, name: 'Verifikasi Wajah', component: 'selfie' },
-    { id: 3, name: 'Verifikasi Dukcapil', component: 'dukcapil' },
-    { id: 4, name: 'Tanda Tangan', component: 'signature' },
-    { id: 5, name: 'Aktivasi Rekening', component: 'activation' },
+    { id: 1, name: 'Upload e-KTP' },
+    { id: 2, name: 'Verifikasi Wajah' },
+    { id: 3, name: 'Verifikasi Dukcapil' },
+    { id: 4, name: 'Tanda Tangan' },
   ];
 
-  const handleNext = (data) => {
+  const handleNext = (data?: Partial<CustomerData>) => {
     if (data) {
       setCustomerData({ ...customerData, ...data });
     }
@@ -54,15 +64,17 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50">
-      <Header />
-      <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
+    <div className="min-h-screen bg-[#FAFBFC]">
+      <Navigation />
+      
+      <div className="py-6">
         {currentStep > 0 && currentStep < 5 && (
-          <ProgressIndicator steps={steps} currentStep={currentStep} />
+          <div className="section-container mb-6">
+            <StepIndicator steps={steps} currentStep={currentStep} />
+          </div>
         )}
-        <div className="mt-4 md:mt-6">
-          {renderStep()}
-        </div>
+        
+        {renderStep()}
       </div>
     </div>
   );
