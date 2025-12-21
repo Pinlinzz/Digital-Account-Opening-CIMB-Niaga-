@@ -1,6 +1,6 @@
   ## Cara run code
 
-  Run `npm i` to install the dependencies.
+  `npm i` di terminal buat install depedencies di  
 
-  Run `npm run dev` to start the development server.
+  `npm run dev` buat jalanin aplikasinya 
   
